@@ -238,7 +238,7 @@ projectpulse/
 
 1. **Clone the repository**
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/Narendra-Vaniya-0506/ProjectPluse.git
    cd projectpulse
    ```
 
