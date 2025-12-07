@@ -1,0 +1,107 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
+
+.tm-dashboard {
+  font-family: 'Roboto', sans-serif;
+  max-width: 1200px;
+  margin: 50px auto;
+  padding: 30px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  box-shadow: 0 0 30px rgba(255, 255, 255, 0.646);
+  text-align: center;
+}
+
+.tm-dashboard h1 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin-bottom: 40px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.projects-section {
+  margin-top: 40px;
+  background-color: rgba(255, 255, 255, 0.1);
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.projects-section h2 {
+  font-size: 1.8rem;
+  font-weight: 600;
+  margin-bottom: 20px;
+  color: white;
+}
+
+.projects-table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: rgba(255, 255, 255, 0.9);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.projects-table th,
+.projects-table td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #ddd;
+  color: #333;
+}
+
+.projects-table th {
+  background-color: #667eea;
+  color: white;
+  font-weight: 600;
+}
+
+.projects-table tbody tr:hover {
+  background-color: #f5f5f5;
+}
+
+.projects-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.projects-table button {
+  padding: 6px 12px;
+  background-color: #2196F3;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background-color 0.3s ease;
+}
+
+.projects-table button:hover {
+  background-color: #1976D2;
+}
+
+.complete-text {
+  background-color: #4CAF50;
+  color: white;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  font-weight: bold;
+  margin-right: 5px;
+}
+
+@media (max-width: 768px) {
+  .tm-dashboard {
+    margin: 20px;
+    padding: 20px;
+  }
+
+  .projects-table {
+    font-size: 0.9rem;
+  }
+
+  .projects-table th,
+  .projects-table td {
+    padding: 8px;
+  }
+}

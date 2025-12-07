@@ -1,0 +1,350 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
+
+.pm-dashboard {
+  font-family: 'Roboto', sans-serif;
+  max-width: 1200px;
+  margin: 50px auto;
+  padding: 30px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  box-shadow: 0 0 30px rgba(255, 255, 255, 0.646);
+  text-align: center;
+}
+
+.pm-dashboard h1 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin-bottom: 40px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.forms-container {
+  display: flex;
+  justify-content: space-between;
+  gap: 40px;
+  flex-wrap: wrap;
+}
+
+.forms-container form {
+  flex: 1;
+  min-width: 300px;
+  background-color: rgba(255, 255, 255, 0.1);
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  overflow: visible;
+}
+
+.forms-container h2 {
+  font-size: 1.8rem;
+  font-weight: 600;
+  margin-bottom: 20px;
+  color: white;
+}
+
+.forms-container input,
+.forms-container select,
+.forms-container textarea {
+  width: 100%;
+  padding: 15px;
+  margin-bottom: 15px;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  background-color: rgba(255, 255, 255, 0.9);
+  color: #333;
+  transition: all 0.3s ease;
+  box-sizing: border-box;
+}
+
+.forms-container input:focus,
+.forms-container select:focus,
+.forms-container textarea:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.5);
+  background-color: white;
+}
+
+.forms-container textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.forms-container button {
+  width: 100%;
+  padding: 15px;
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1.1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+  margin-top: 10px;
+}
+
+.forms-container button:hover {
+  background-color: #45a049;
+  transform: translateY(-2px);
+}
+
+.search-container {
+  position: relative;
+  width: 100%;
+}
+
+.search-input {
+  position: relative;
+  padding-right: 40px;
+}
+
+.search-input::before {
+  content: '🔍';
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  font-size: 1.2rem;
+}
+
+.suggestions-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 100%;
+  background-color: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  max-height: 150px;
+  overflow-y: auto;
+  z-index: 1000;
+}
+
+.suggestion-item {
+  padding: 10px;
+  cursor: pointer;
+  border-bottom: 1px solid #eee;
+  color: #333;
+}
+
+.suggestion-item:hover {
+  background-color: #f0f0f0;
+}
+
+.team-members-list {
+  margin-top: 10px;
+}
+
+.team-member-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px;
+  background-color: rgba(255, 255, 255, 0.1);
+  margin-bottom: 5px;
+  border-radius: 4px;
+}
+
+.team-member-item button {
+  padding: 5px 10px;
+  background-color: #2196F3;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.team-member-item button:hover {
+  background-color: #1976D2;
+}
+
+.selected-team-members {
+  margin-top: 20px;
+}
+
+.selected-member {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px;
+  background-color: rgba(255, 255, 255, 0.1);
+  margin-bottom: 5px;
+  border-radius: 4px;
+}
+
+.selected-member button {
+  padding: 5px 10px;
+  background-color: #f44336;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.selected-member button:hover {
+  background-color: #d32f2f;
+}
+
+.users-section,
+.projects-section {
+  margin-top: 40px;
+  background-color: rgba(255, 255, 255, 0.1);
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.users-section h2,
+.projects-section h2 {
+  font-size: 1.8rem;
+  font-weight: 600;
+  margin-bottom: 20px;
+  color: white;
+}
+
+.users-table,
+.projects-table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: rgba(255, 255, 255, 0.9);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.users-table th,
+.users-table td,
+.projects-table th,
+.projects-table td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #ddd;
+  color: #333;
+}
+
+.users-table th,
+.projects-table th {
+  background-color: #667eea;
+  color: white;
+  font-weight: 600;
+}
+
+.users-table tbody tr:hover,
+.projects-table tbody tr:hover {
+  background-color: #f5f5f5;
+}
+
+.users-table tbody tr:last-child td,
+.projects-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.projects-table button {
+  padding: 6px 12px;
+  margin-right: 5px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background-color 0.3s ease;
+}
+
+.projects-table button:first-child {
+  background-color: #4CAF50;
+  color: white;
+}
+
+.projects-table button:first-child:hover {
+  background-color: #45a049;
+}
+
+.projects-table button:nth-child(2) {
+  background-color: #2196F3;
+  color: white;
+}
+
+.projects-table button:nth-child(2):hover {
+  background-color: #1976D2;
+}
+
+.projects-table button:only-child {
+  background-color: #9E9E9E;
+  color: white;
+}
+
+.projects-table button:only-child:hover {
+  background-color: #757575;
+}
+
+.complete-text {
+  background-color: #4CAF50;
+  color: white;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  font-weight: bold;
+  margin-right: 5px;
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.pagination-button {
+  padding: 8px 12px;
+  margin: 0 5px;
+  border: 1px solid #667eea;
+  background-color: white;
+  color: #667eea;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.pagination-button:hover {
+  background-color: #667eea;
+  color: white;
+}
+
+.pagination-button.active {
+  background-color: #667eea;
+  color: white;
+  font-weight: bold;
+}
+
+@media (max-width: 768px) {
+  .pm-dashboard {
+    margin: 20px;
+    padding: 20px;
+  }
+
+  .forms-container {
+    flex-direction: column;
+  }
+
+  .users-table,
+  .projects-table {
+    font-size: 0.9rem;
+  }
+
+  .users-table th,
+  .users-table td,
+  .projects-table th,
+  .projects-table td {
+    padding: 8px;
+  }
+
+  .pagination-button {
+    padding: 6px 10px;
+    margin: 0 2px;
+  }
+}
