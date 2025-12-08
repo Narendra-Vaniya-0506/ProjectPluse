@@ -5,7 +5,7 @@ A comprehensive project management application built with React and Node.js, des
 ## 🚀 Features
 
 ### Role-Based Access Control
-- **Admin**: Full system access - create users, manage projects, oversee all operations
+- **Admin**: Full system access - create users, manage projects, oversee all operations. Admins can view and manage all users created by themselves or their Project Managers, and all projects created by themselves or their Project Managers.
 - **Project Manager**: Create and manage projects, assign tasks, monitor progress
 - **Team Member**: View assigned projects, update task status, participate in chats
 
@@ -17,6 +17,7 @@ A comprehensive project management application built with React and Node.js, des
 - **Progress Tracking**: Visual progress indicators and completion percentages
 - **Deadline Management**: Automatic task locking and countdown timers
 - **Live Updates**: Real-time synchronization across all users
+- **Admin Account Management**: Secure admin registration and login, with full control over users and projects created by themselves or their Project Managers
 
 ## 🏗️ Architecture
 
@@ -46,7 +47,7 @@ projectpulse/
 │   │   ├── pages/
 │   │   │   ├── Home.jsx                    # Landing page with features overview
 │   │   │   ├── Login.jsx                   # User authentication page
-│   │   │   ├── SignIn.jsx                  # User registration page
+│   │   │   ├── SignIn.jsx                  # User registration page for Admin
 │   │   │   ├── ChooseYourRole.jsx          # Role selection interface
 │   │   │   ├── AdminDashboard.jsx          # Admin control panel
 │   │   │   ├── ProjectManagerDashboard.jsx # PM project management
@@ -97,15 +98,16 @@ projectpulse/
 #### Protected Pages
 
 - **`/admin` (AdminDashboard.jsx)**: Admin control center
-  - **Logic**: 
+  - **Logic**:
     - Create users (PMs and Team Members)
     - Create projects with team assignment
-    - View all users and projects with pagination
+    - View all users created by the admin or their PMs
+    - View all projects created by the admin or their PMs
     - Real-time updates via Socket.io
   - **Functions**:
     - `handleCreateUser()`: User creation with role validation
     - `handleCreateProject()`: Project setup with card auto-creation
-    - `fetchProjects()` & `fetchUsers()`: Data fetching with pagination
+    - `fetchProjects()` & `fetchUsers()`: Data fetching including users and projects from PMs under the admin
   - **Connects to**: `/chat/:projectId` for project access
 
 - **`/pm-dashboard` (ProjectManagerDashboard.jsx)**: PM workspace
@@ -290,6 +292,8 @@ projectpulse/
 - Protected API endpoints
 - Session-based authentication
 - Input validation and sanitization
+- Secure admin account creation and login with password hashing
+- Admin isolation: Admins can only manage users and projects created by themselves or their Project Managers
 
 ## 🎯 Use Cases
 

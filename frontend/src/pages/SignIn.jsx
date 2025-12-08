@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
-import { useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import { loginSuccess } from '../store/slices/authSlice';
+import { register } from '../utils/api';
 import './Login.css';
 
 const SignIn = () => {
@@ -26,27 +25,10 @@ const SignIn = () => {
 
     setLoading(true);
     try {
-      // Simulate API call for registration
-      const response = await fetch('/api/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password, role: 'Admin' }),
-      });
-      const data = await response.json();
-      if (response.ok) {
-        dispatch(loginSuccess(data.user));
-        if (data.user.role === 'Admin') {
-          navigate('/admin');
-        } else if (data.user.role === 'Project Manager') {
-          navigate('/pm-dashboard');
-        } else {
-          navigate('/dashboard');
-        }
-      } else {
-        setError(data.message);
-      }
+      await register(name, email, password);
+      navigate('/login');
     } catch (err) {
-      setError('Registration failed');
+      setError(err.response?.data?.message || 'Registration failed');
     } finally {
       setLoading(false);
     }

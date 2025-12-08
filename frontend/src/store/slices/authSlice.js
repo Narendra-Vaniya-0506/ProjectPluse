@@ -2,6 +2,7 @@ import { createSlice } from '@reduxjs/toolkit';
 
 const initialState = {
   user: null,
+  token: null,
   isAuthenticated: false,
   loading: true, // Start with loading true
   error: null,
@@ -18,8 +19,9 @@ const authSlice = createSlice({
     loginSuccess: (state, action) => {
       state.loading = false;
       state.isAuthenticated = true;
-      state.user = action.payload;
-      localStorage.setItem('auth', JSON.stringify({ user: action.payload, isAuthenticated: true }));
+      state.user = action.payload.user;
+      state.token = action.payload.token;
+      localStorage.setItem('auth', JSON.stringify({ user: action.payload.user, token: action.payload.token, isAuthenticated: true }));
     },
     loginFailure: (state, action) => {
       state.loading = false;
@@ -27,6 +29,7 @@ const authSlice = createSlice({
     },
     logout: (state) => {
       state.user = null;
+      state.token = null;
       state.isAuthenticated = false;
       state.loading = false;
       state.error = null;
@@ -35,8 +38,9 @@ const authSlice = createSlice({
     initializeAuth: (state) => {
       const authData = localStorage.getItem('auth');
       if (authData) {
-        const { user, isAuthenticated } = JSON.parse(authData);
+        const { user, token, isAuthenticated } = JSON.parse(authData);
         state.user = user;
+        state.token = token;
         state.isAuthenticated = isAuthenticated;
       }
       state.loading = false;

@@ -2,6 +2,43 @@ import axios from 'axios';
 
 const API_BASE_URL = '/api';
 
+// Add request interceptor to include auth token
+axios.interceptors.request.use(
+  (config) => {
+    const authData = localStorage.getItem('auth');
+    if (authData) {
+      const { token } = JSON.parse(authData);
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+export const login = async (email, password) => {
+  try {
+    const response = await axios.post(`${API_BASE_URL}/login`, { email, password });
+    return response.data;
+  } catch (error) {
+    console.error('Error logging in:', error);
+    throw error;
+  }
+};
+
+export const register = async (name, email, password) => {
+  try {
+    const response = await axios.post(`${API_BASE_URL}/register`, { name, email, password });
+    return response.data;
+  } catch (error) {
+    console.error('Error registering:', error);
+    throw error;
+  }
+};
+
 export const selectRole = async (role) => {
   try {
     const response = await axios.post(`${API_BASE_URL}/select-role`, { role });

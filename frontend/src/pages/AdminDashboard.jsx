@@ -269,15 +269,14 @@ const AdminDashboard = () => {
               placeholder="Search Team Members"
               value={searchTerm}
               onChange={handleSearchChange}
-              onBlur={handleInputBlur}
               className="search-input"
               autoComplete="off"
             />
             {showSuggestions && (
               <div className="suggestions-dropdown">
-                {allTeamMembers.filter(user => user.username.toLowerCase().startsWith(searchTerm.toLowerCase())).map(user => (
+                {allTeamMembers.filter(user => (user.name || user.username).toLowerCase().startsWith(searchTerm.toLowerCase())).map(user => (
                   <div key={user._id} className="suggestion-item">
-                    <span>{user.username}</span>
+                    <span>{user.name || user.username}</span>
                     <button type="button" onClick={() => { handleSelectTeamMember(user); setSearchTerm(''); setShowSuggestions(false); }}>Select</button>
                   </div>
                 ))}

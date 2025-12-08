@@ -5,20 +5,55 @@ const cors = require('cors');
 const crypto = require('crypto');
 const http = require('http');
 const socketIo = require('socket.io');
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
 require('dotenv').config();
+
+const JWT_SECRET = process.env.JWT_SECRET || 'your_secret_key';
+
+// Middleware to verify JWT
+const authenticateToken = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+  if (!token) return res.status(401).json({ error: 'Access token required' });
+
+  jwt.verify(token, JWT_SECRET, (err, user) => {
+    if (err) return res.status(403).json({ error: 'Invalid token' });
+    req.user = user;
+    next();
+  });
+};
+
+// Middleware to check if user is admin
+const requireAdmin = (req, res, next) => {
+  if (req.user.role !== 'Admin') return res.status(403).json({ error: 'Admin access required' });
+  next();
+};
+
+// Middleware to check if user is PM or Admin
+const requirePM = (req, res, next) => {
+  if (req.user.role !== 'Project Manager' && req.user.role !== 'Admin') return res.status(403).json({ error: 'PM or Admin access required' });
+  next();
+};
+
+// Middleware to check if user is Team Member, PM, or Admin
+const requireTeamMember = (req, res, next) => {
+  if (!['Team Member', 'Project Manager', 'Admin'].includes(req.user.role)) return res.status(403).json({ error: 'Access denied' });
+  next();
+};
 
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
-    origin: "http://localhost:3000",
+    origin: ["http://localhost:3000", "http://localhost:5173", "http://localhost:5174"],
     methods: ["GET", "POST"]
   }
 });
 const PORT = process.env.PORT || 5000;
 
 // Middleware
-app.use(cors());
+app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
 
 // Socket.io connection handling
@@ -112,7 +147,8 @@ const chatMessageSchema = new mongoose.Schema({
   status: { type: String, enum: ['sent', 'delivered', 'read'], default: 'sent' },
   isDeleted: { type: Boolean, default: false },
   editedAt: Date,
-  timestamp: { type: Date, default: Date.now }
+  timestamp: { type: Date, default: Date.now },
+  createdBy: String
 });
 
 const ChatMessage = mongoose.model('ChatMessage', chatMessageSchema, 'chatmessages');
@@ -127,6 +163,7 @@ const cardSchema = new mongoose.Schema({
   workList: [{ task: String, completed: Boolean }],
   percentage: { type: Number, default: 0 },
   locked: { type: Boolean, default: false },
+  createdBy: String,
   createdAt: { type: Date, default: Date.now }
 });
 
@@ -138,40 +175,119 @@ const getChatModel = () => {
 
 
 
+// API endpoint for register
+app.post('/api/register', async (req, res) => {
+  try {
+    const { name, email, password } = req.body;
+    console.log('Registering new admin:', { name, email });
+
+    // Check if user already exists
+    const existingUser = await User.findOne({ username: email });
+    if (existingUser) {
+      return res.status(400).json({ message: 'User already exists' });
+    }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Create new admin user
+    const newUser = new User({
+      username: email,
+      password: hashedPassword,
+      role: 'Admin',
+      createdBy: email, // Self-created
+      name
+    });
+
+    const savedUser = await newUser.save();
+    console.log('New admin registered:', savedUser.username);
+
+    // Generate JWT
+    const token = jwt.sign(
+      { id: savedUser._id, username: savedUser.username, role: savedUser.role },
+      JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
+    res.status(201).json({
+      user: {
+        id: savedUser._id,
+        role: savedUser.role,
+        username: savedUser.username,
+        email: savedUser.username,
+        name: savedUser.name
+      },
+      token
+    });
+  } catch (error) {
+    console.error('Registration failed:', error);
+    res.status(500).json({ error: 'Registration failed' });
+  }
+});
+
 // API endpoint for login
 app.post('/api/login', async (req, res) => {
   try {
     const { email, password } = req.body;
+    console.log('Login attempt for:', email);
+
+    // Special case for hardcoded admin
     if (email === 'narendra@gmail.com' && password === '12345678') {
-      res.status(200).json({ user: { role: 'Admin', username: 'narendra@gmail.com', email: 'narendra@gmail.com', name: 'Admin' } });
-    } else {
-      // First check global users (PMs and Admin-created users)
-      let user = await User.findOne({ username: email, password });
-      if (user) {
-        res.status(200).json({ user: { role: user.role, username: user.username, email: user.username, name: user.name } });
-      } else {
-        // If not found in global, check PM-created users
-        const db = mongoose.connection.db;
-        const collections = await db.listCollections().toArray();
-        const userCollections = collections.filter(col => col.name.startsWith('pm_users_'));
-        for (const col of userCollections) {
-          const UserModel = mongoose.model(col.name, userSchema, col.name);
-          user = await UserModel.findOne({ username: email, password });
-          if (user) {
-            res.status(200).json({ user: { role: user.role, username: user.username, email: user.username, name: user.name } });
-            return;
-          }
-        }
-        res.status(401).json({ message: 'Invalid credentials' });
+      const token = jwt.sign(
+        { id: 'hardcoded', username: 'narendra@gmail.com', role: 'Admin' },
+        JWT_SECRET,
+        { expiresIn: '24h' }
+      );
+      return res.status(200).json({
+        user: { role: 'Admin', username: 'narendra@gmail.com', email: 'narendra@gmail.com', name: 'Admin' },
+        token
+      });
+    }
+
+    // First check global users (PMs and Admin-created users)
+    let user = await User.findOne({ username: email });
+    console.log('User found in global:', user ? user.username : 'none');
+    if (user && await bcrypt.compare(password, user.password)) {
+      console.log('Password match for global user:', user.username);
+      const token = jwt.sign(
+        { id: user._id, username: user.username, role: user.role },
+        JWT_SECRET,
+        { expiresIn: '24h' }
+      );
+      return res.status(200).json({
+        user: { role: user.role, username: user.username, email: user.username, name: user.name },
+        token
+      });
+    }
+
+    // If not found in global, check PM-created users
+    const db = mongoose.connection.db;
+    const collections = await db.listCollections().toArray();
+    const userCollections = collections.filter(col => col.name.startsWith('pm_users_'));
+    for (const col of userCollections) {
+      const UserModel = mongoose.model(col.name, userSchema, col.name);
+      user = await UserModel.findOne({ username: email });
+      if (user && await bcrypt.compare(password, user.password)) {
+        const token = jwt.sign(
+          { id: user._id, username: user.username, role: user.role },
+          JWT_SECRET,
+          { expiresIn: '24h' }
+        );
+        return res.status(200).json({
+          user: { role: user.role, username: user.username, email: user.username, name: user.name },
+          token
+        });
       }
     }
+
+    res.status(401).json({ message: 'Invalid credentials' });
   } catch (error) {
     res.status(500).json({ error: 'Login failed' });
   }
 });
 
 // API endpoint for Admin to create users
-app.post('/api/create-user', async (req, res) => {
+app.post('/api/create-user', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { email, name, password, role } = req.body;
     console.log('Creating user:', { email, name, password, role });
@@ -190,7 +306,8 @@ app.post('/api/create-user', async (req, res) => {
         return res.status(400).json({ error: 'This email is already taken try other' });
       }
     }
-    const user = new User({ username: email, password, role, createdBy: 'Admin', name });
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const user = new User({ username: email, password: hashedPassword, role, createdBy: req.user.username, name });
     const savedUser = await user.save();
     console.log('User saved:', savedUser);
     res.status(201).json({ message: 'User created successfully', user: savedUser });
@@ -201,10 +318,10 @@ app.post('/api/create-user', async (req, res) => {
 });
 
 // API endpoint for Project Manager to create users
-app.post('/api/pm/create-user', async (req, res) => {
+app.post('/api/pm/create-user', authenticateToken, requirePM, async (req, res) => {
   try {
     const { email, name, password, role, pmId } = req.body;
-    console.log('Creating user for PM:', { email, name, password, role, pmId });
+    console.log('Creating user for PM:', { email, name, password: password ? 'provided' : 'missing', role, pmId });
     if (!['Team Member'].includes(role)) {
       return res.status(400).json({ error: 'Invalid role for PM creation' });
     }
@@ -219,8 +336,13 @@ app.post('/api/pm/create-user', async (req, res) => {
         return res.status(400).json({ error: 'This email is already taken try other' });
       }
     }
+    console.log('Hashing password...');
+    const hashedPassword = await bcrypt.hash(password, 10);
+    console.log('Password hashed successfully');
     const UserModel = getUserModel(pmId);
-    const user = new UserModel({ username: email, password, role, createdBy: pmId, name });
+    console.log('Creating user model...');
+    const user = new UserModel({ username: email, password: hashedPassword, role, createdBy: pmId, name });
+    console.log('Saving user...');
     const savedUser = await user.save();
     console.log('User saved:', savedUser);
     res.status(201).json({ message: 'User created successfully', user: savedUser });
@@ -231,7 +353,7 @@ app.post('/api/pm/create-user', async (req, res) => {
 });
 
 // API endpoint for Project Manager to create projects
-app.post('/api/create-project', async (req, res) => {
+app.post('/api/create-project', authenticateToken, requirePM, async (req, res) => {
   try {
     const { name, description, createdBy, teamMembers: tm, cardsNumber } = req.body;
     let teamMembers = tm || [];
@@ -240,8 +362,10 @@ app.post('/api/create-project', async (req, res) => {
     if (teamMembers.length === 0) {
       return res.status(400).json({ error: 'At least one team member is required' });
     }
-    const ProjectModel = getProjectModel(createdBy);
-    const project = new ProjectModel({ name, description, createdBy, teamMembers, cardsNumber });
+    // For Admin, override createdBy to their username
+    const actualCreatedBy = req.user.role === 'Admin' ? req.user.username : createdBy;
+    const ProjectModel = getProjectModel(actualCreatedBy);
+    const project = new ProjectModel({ name, description, createdBy: actualCreatedBy, teamMembers, cardsNumber });
     const savedProject = await project.save();
     console.log('Project saved:', savedProject);
 
@@ -257,7 +381,8 @@ app.post('/api/create-project', async (req, res) => {
           endDate: null,
           workList: [],
           percentage: 0,
-          locked: false
+          locked: false,
+          createdBy: req.user.username
         });
       }
       await Card.insertMany(cards);
@@ -272,7 +397,7 @@ app.post('/api/create-project', async (req, res) => {
 });
 
 // API endpoint for PM to get their projects
-app.get('/api/pm/projects/:pmId', async (req, res) => {
+app.get('/api/pm/projects/:pmId', authenticateToken, requirePM, async (req, res) => {
   try {
     const { pmId } = req.params;
     const ProjectModel = getProjectModel(pmId);
@@ -299,9 +424,14 @@ app.get('/api/pm/projects/:pmId', async (req, res) => {
 });
 
 // API endpoint for Admin to get all projects
-app.get('/api/admin/projects', async (req, res) => {
+app.get('/api/admin/projects', authenticateToken, requireAdmin, async (req, res) => {
   try {
-    console.log('Fetching all projects for admin');
+    console.log('Fetching projects for admin:', req.user.username);
+    // Find all PMs created by this admin
+    const pmsCreatedByAdmin = await User.find({ role: 'Project Manager', createdBy: req.user.username });
+    const pmUsernames = pmsCreatedByAdmin.map(pm => pm.username);
+    const creators = [req.user.username, ...pmUsernames];
+
     const db = mongoose.connection.db;
     const collections = await db.listCollections().toArray();
     console.log('All collections:', collections.map(c => c.name));
@@ -310,7 +440,12 @@ app.get('/api/admin/projects', async (req, res) => {
     let allProjects = [];
     for (const col of projectCollections) {
       const ProjectModel = mongoose.model(col.name, projectSchema, col.name);
-      const projects = await ProjectModel.find();
+      let projects;
+      if (col.name === 'admin_projects') {
+        projects = await ProjectModel.find({ createdBy: req.user.username });
+      } else {
+        projects = await ProjectModel.find({});
+      }
       const formattedProjects = await Promise.all(projects.map(async (project) => {
         const cards = await Card.find({ projectId: project._id.toString() });
         const totalTasks = cards.reduce((sum, card) => sum + card.workList.length, 0);
@@ -336,11 +471,18 @@ app.get('/api/admin/projects', async (req, res) => {
 });
 
 // API endpoint for PM to get their users
-app.get('/api/pm/users/:pmId', async (req, res) => {
+app.get('/api/pm/users/:pmId', authenticateToken, requirePM, async (req, res) => {
   try {
     const { pmId } = req.params;
-    const UserModel = getUserModel(pmId);
-    const users = await UserModel.find();
+    let users;
+    if (req.user.role === 'Admin' && pmId === req.user.username) {
+      // Admin fetching their own created users
+      users = await User.find({ createdBy: pmId });
+    } else {
+      // PM fetching their users
+      const UserModel = getUserModel(pmId);
+      users = await UserModel.find();
+    }
     const formattedUsers = users.map(user => ({
       ...user.toObject(),
       createdBy: `created by - ${user.createdBy}`
@@ -353,20 +495,32 @@ app.get('/api/pm/users/:pmId', async (req, res) => {
 });
 
 // API endpoint for Admin to get all users
-app.get('/api/admin/users', async (req, res) => {
+app.get('/api/admin/users', authenticateToken, requireAdmin, async (req, res) => {
   try {
+    // Find all PMs created by this admin
+    const pmsCreatedByAdmin = await User.find({ role: 'Project Manager', createdBy: req.user.username });
+    const pmUsernames = pmsCreatedByAdmin.map(pm => pm.username);
+
     const db = mongoose.connection.db;
     const collections = await db.listCollections().toArray();
     const userCollections = collections.filter(col => col.name.startsWith('pm_users_'));
     let allUsers = [];
-    for (const col of userCollections) {
-      const UserModel = mongoose.model(col.name, userSchema, col.name);
-      const users = await UserModel.find();
-      allUsers = allUsers.concat(users);
+
+    // Fetch users from PM collections where the PM is created by this admin
+    for (const pmUsername of pmUsernames) {
+      const normalizedPmUsername = pmUsername.replace(/@/g, '_').replace(/\./g, '_').replace(/[^a-zA-Z0-9_]/g, '');
+      const collectionName = `pm_users_${normalizedPmUsername}`;
+      if (userCollections.some(col => col.name === collectionName)) {
+        const UserModel = mongoose.model(collectionName, userSchema, collectionName);
+        const users = await UserModel.find();
+        allUsers = allUsers.concat(users);
+      }
     }
-    // Also include global users (PMs)
-    const globalUsers = await User.find();
+
+    // Also include global users created by the admin (PMs and self-created)
+    const globalUsers = await User.find({ createdBy: req.user.username });
     allUsers = allUsers.concat(globalUsers);
+
     res.status(200).json(allUsers);
   } catch (error) {
     console.error('Error fetching users:', error);
@@ -375,7 +529,7 @@ app.get('/api/admin/users', async (req, res) => {
 });
 
 // API endpoint for Team Member to get their projects
-app.get('/api/team-member/projects/:username', async (req, res) => {
+app.get('/api/team-member/projects/:username', authenticateToken, requireTeamMember, async (req, res) => {
   try {
     const { username } = req.params;
     console.log('Fetching projects for team member:', username);
@@ -415,7 +569,7 @@ app.get('/api/team-member/projects/:username', async (req, res) => {
 
 
 // API endpoint for Admin to delete a user
-app.delete('/api/admin/users/:id', async (req, res) => {
+app.delete('/api/admin/users/:id', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const user = await User.findById(id);
@@ -440,7 +594,7 @@ app.delete('/api/admin/users/:id', async (req, res) => {
 });
 
 // API endpoint to get chat list for a project
-app.get('/api/chat/:projectId/list', async (req, res) => {
+app.get('/api/chat/:projectId/list', authenticateToken, requireTeamMember, async (req, res) => {
   try {
     const { projectId } = req.params;
     const { currentUser } = req.query;
@@ -500,7 +654,7 @@ app.get('/api/chat/:projectId/list', async (req, res) => {
 });
 
 // API endpoint to get chat messages for a specific chat
-app.get('/api/chat/:projectId/:chatType/:chatId', async (req, res) => {
+app.get('/api/chat/:projectId/:chatType/:chatId', authenticateToken, requireTeamMember, async (req, res) => {
   try {
     const { projectId, chatType, chatId } = req.params;
     const { currentUser } = req.query; // Pass current user to check authorization
@@ -547,7 +701,7 @@ app.get('/api/chat/:projectId/:chatType/:chatId', async (req, res) => {
 });
 
 // API endpoint to post a chat message
-app.post('/api/chat/:projectId/:chatType/:chatId', async (req, res) => {
+app.post('/api/chat/:projectId/:chatType/:chatId', authenticateToken, requireTeamMember, async (req, res) => {
   try {
     const { projectId, chatType, chatId } = req.params;
     const { sender, message } = req.body;
@@ -589,7 +743,7 @@ app.post('/api/chat/:projectId/:chatType/:chatId', async (req, res) => {
 });
 
 // API endpoint to update message status
-app.put('/api/chat/message/:messageId/status', async (req, res) => {
+app.put('/api/chat/message/:messageId/status', authenticateToken, requireTeamMember, async (req, res) => {
   try {
     const { messageId } = req.params;
     const { status } = req.body;
@@ -606,7 +760,7 @@ app.put('/api/chat/message/:messageId/status', async (req, res) => {
 });
 
 // API endpoint to delete a message
-app.delete('/api/chat/message/:messageId', async (req, res) => {
+app.delete('/api/chat/message/:messageId', authenticateToken, requireTeamMember, async (req, res) => {
   try {
     const { messageId } = req.params;
     const { sender } = req.body; // Verify sender
@@ -623,7 +777,7 @@ app.delete('/api/chat/message/:messageId', async (req, res) => {
 });
 
 // API endpoint to edit a message
-app.put('/api/chat/message/:messageId', async (req, res) => {
+app.put('/api/chat/message/:messageId', authenticateToken, requireTeamMember, async (req, res) => {
   try {
     const { messageId } = req.params;
     const { sender, message: newMessage } = req.body;
@@ -654,7 +808,7 @@ app.put('/api/chat/message/:messageId', async (req, res) => {
 // API endpoints for cards
 
 // Get cards for a project
-app.get('/api/cards/:projectId', async (req, res) => {
+app.get('/api/cards/:projectId', authenticateToken, requireTeamMember, async (req, res) => {
   try {
     const { projectId } = req.params;
     const cards = await Card.find({ projectId });
@@ -681,7 +835,7 @@ app.get('/api/cards/:projectId', async (req, res) => {
 });
 
 // Create a new card
-app.post('/api/cards', async (req, res) => {
+app.post('/api/cards', authenticateToken, requireTeamMember, async (req, res) => {
   try {
     const cardData = req.body;
     const newCard = new Card(cardData);
@@ -697,7 +851,7 @@ app.post('/api/cards', async (req, res) => {
 });
 
 // Update a card
-app.put('/api/cards/:cardId', async (req, res) => {
+app.put('/api/cards/:cardId', authenticateToken, requireTeamMember, async (req, res) => {
   try {
     const { cardId } = req.params;
     const updates = req.body;
@@ -747,7 +901,7 @@ app.put('/api/cards/:cardId', async (req, res) => {
 });
 
 // Delete a card
-app.delete('/api/cards/:cardId', async (req, res) => {
+app.delete('/api/cards/:cardId', authenticateToken, requireTeamMember, async (req, res) => {
   try {
     const { cardId } = req.params;
     const deletedCard = await Card.findByIdAndDelete(cardId);
@@ -762,7 +916,7 @@ app.delete('/api/cards/:cardId', async (req, res) => {
 
 
 // Update project status
-app.put('/api/projects/:projectId/status', async (req, res) => {
+app.put('/api/projects/:projectId/status', authenticateToken, requireTeamMember, async (req, res) => {
   try {
     const { projectId } = req.params;
     const { status } = req.body;

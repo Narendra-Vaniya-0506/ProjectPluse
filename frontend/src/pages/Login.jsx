@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { loginStart, loginSuccess, loginFailure, logout } from '../store/slices/authSlice';
+import { login as apiLogin } from '../utils/api';
 import './Login.css';
 
 const Login = () => {
@@ -22,27 +23,17 @@ const Login = () => {
     e.preventDefault();
     dispatch(loginStart());
     try {
-      // Simulate API call
-      const response = await fetch('/api/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
-      const data = await response.json();
-      if (response.ok) {
-        dispatch(loginSuccess(data.user));
-        if (data.user.role === 'Admin') {
-          navigate('/admin');
-        } else if (data.user.role === 'Project Manager') {
-          navigate('/pm-dashboard');
-        } else {
-          navigate('/dashboard'); // or another protected page
-        }
+      const data = await apiLogin(email, password);
+      dispatch(loginSuccess(data));
+      if (data.user.role === 'Admin') {
+        navigate('/admin');
+      } else if (data.user.role === 'Project Manager') {
+        navigate('/pm-dashboard');
       } else {
-        dispatch(loginFailure(data.message));
+        navigate('/dashboard'); // or another protected page
       }
     } catch (err) {
-      dispatch(loginFailure('Login failed'));
+      dispatch(loginFailure(err.response?.data?.message || 'Login failed'));
     }
   };
 
